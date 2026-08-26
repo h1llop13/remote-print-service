@@ -42,7 +42,11 @@ public class PrintJobController {
             @RequestParam(
                     value = "pageRange",
                     defaultValue = "ALL"
-            ) String pageRange
+            ) String pageRange,
+            @RequestParam(
+                    value = "copies",
+                    defaultValue = "1"
+            ) int copies
     ) throws IOException {
 
         documentValidationService.validatePdf(file);
@@ -67,6 +71,14 @@ public class PrintJobController {
         );
 
         job.setPageRange(pageRange);
+
+        if (copies < 1 || copies > 20) {
+            throw new IllegalArgumentException(
+                    "Copies must be between 1 and 20"
+            );
+        }
+
+        job.setCopies(copies);
 
         String printableFilePath = pdfService.createPrintablePdf(
                 filePath,
