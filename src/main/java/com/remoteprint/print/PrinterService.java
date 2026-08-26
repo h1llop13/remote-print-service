@@ -11,4 +11,6 @@ public interface PrinterService {
     String getDefaultPrinter();
 
     PrinterStatus getStatus();
+
+    PrintResult print(PrintRequest request);
 }

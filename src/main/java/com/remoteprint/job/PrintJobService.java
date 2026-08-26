@@ -2,6 +2,8 @@ package com.remoteprint.job;
 
 import com.remoteprint.print.PrinterService;
 import org.springframework.stereotype.Service;
+import com.remoteprint.print.PrintRequest;
+import com.remoteprint.print.PrintResult;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -32,23 +34,41 @@ public class PrintJobService {
     }
 
     public PrintJob processJob(PrintJob job) {
+
         try {
             job.setStatus(PrintJobStatus.PROCESSING);
             job.setStartedAt(LocalDateTime.now());
 
-            if(!printerService.isPrinterAvailable()) {
+            if (!printerService.isPrinterAvailable()) {
                 job.setStatus(PrintJobStatus.FAILED);
                 job.setErrorMessage("Printer is unavailable");
+
                 return job;
             }
 
             job.setStatus(PrintJobStatus.PRINTING);
 
+            PrintRequest printRequest = new PrintRequest(
+                    job.getPrintableFilePath(),
+                    job.getCopies()
+            );
+
+            PrintResult printResult = printerService.print(printRequest);
+
+            if (!printResult.isSuccess()) {
+                job.setStatus(PrintJobStatus.FAILED);
+                job.setErrorMessage(printResult.getMessage());
+
+                return job;
+            }
+
             job.setStatus(PrintJobStatus.COMPLETED);
             job.setCompletedAt(LocalDateTime.now());
 
             return job;
+
         } catch (Exception exception) {
+
             job.setStatus(PrintJobStatus.FAILED);
             job.setErrorMessage(exception.getMessage());
 
