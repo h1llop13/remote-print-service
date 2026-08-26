@@ -1,5 +1,6 @@
 package com.remoteprint.controller;
 
+import com.remoteprint.document.DocumentValidationService;
 import com.remoteprint.document.PageRangeService;
 import com.remoteprint.document.PdfService;
 import com.remoteprint.job.PrintJob;
@@ -19,17 +20,20 @@ public class PrintJobController {
     private final FileStorageService fileStorageService;
     private final PdfService pdfService;
     private final PageRangeService pageRangeService;
+    private final DocumentValidationService documentValidationService;
 
     public PrintJobController(
             PrintJobService printJobService,
             FileStorageService fileStorageService,
             PdfService pdfService,
-            PageRangeService pageRangeService
+            PageRangeService pageRangeService,
+            DocumentValidationService documentValidationService
     ) {
         this.printJobService = printJobService;
         this.fileStorageService = fileStorageService;
         this.pdfService = pdfService;
         this.pageRangeService = pageRangeService;
+        this.documentValidationService = documentValidationService;
     }
 
     @PostMapping
@@ -40,6 +44,8 @@ public class PrintJobController {
                     defaultValue = "ALL"
             ) String pageRange
     ) throws IOException {
+
+        documentValidationService.validatePdf(file);
 
         PrintJob job = printJobService.createJob(
                 file.getOriginalFilename(),
