@@ -69,8 +69,14 @@ public class PrintJobController {
 
         job.setPageRange(pageRange);
 
+        String printableFilePath = pdfService.createPrintablePdf(
+                filePath,
+                selectedPages
+        );
+
         System.out.println("PDF page count: " + pageCount);
         System.out.println("Selected pages: " + selectedPages);
+        System.out.println("Printable PDF: " + printableFilePath);
 
         PrintJob processedJob = printJobService.processJob(job);
 
