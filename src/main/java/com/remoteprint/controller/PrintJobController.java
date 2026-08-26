@@ -1,5 +1,6 @@
 package com.remoteprint.controller;
 
+import com.remoteprint.document.PdfService;
 import com.remoteprint.job.PrintJob;
 import com.remoteprint.job.PrintJobService;
 import com.remoteprint.storage.FileStorageService;
@@ -15,13 +16,16 @@ public class PrintJobController {
 
     private final PrintJobService printJobService;
     private final FileStorageService fileStorageService;
+    private final PdfService pdfService;
 
     public PrintJobController(
             PrintJobService printJobService,
-            FileStorageService fileStorageService
+            FileStorageService fileStorageService,
+            PdfService pdfService
     ) {
         this.printJobService = printJobService;
         this.fileStorageService = fileStorageService;
+        this.pdfService = pdfService;
     }
 
     @PostMapping
@@ -41,6 +45,10 @@ public class PrintJobController {
         );
 
         job.setFilePath(filePath);
+
+        int pageCount = pdfService.getPageCount(filePath);
+
+        System.out.println("PDF page count: " + pageCount);
 
         PrintJob processedJob = printJobService.processJob(job);
 
