@@ -49,8 +49,7 @@ public class PrintJobController {
 
         PrintJob job = printJobService.createJob(
                 file.getOriginalFilename(),
-                file.getContentType(),
-                null
+                file.getContentType()
         );
 
         String filePath = fileStorageService.saveOriginalFile(
@@ -58,7 +57,7 @@ public class PrintJobController {
                 file
         );
 
-        job.setFilePath(filePath);
+        job.setOriginalFilePath(filePath);
 
         int pageCount = pdfService.getPageCount(filePath);
 
@@ -73,6 +72,8 @@ public class PrintJobController {
                 filePath,
                 selectedPages
         );
+
+        job.setPrintableFilePath(printableFilePath);
 
         System.out.println("PDF page count: " + pageCount);
         System.out.println("Selected pages: " + selectedPages);

@@ -15,13 +15,14 @@ public class PrintJobService {
         this.printerService = printerService;
     }
 
-    public PrintJob createJob(String originalFileName, String fileType, String filePath) {
+    public PrintJob createJob(String originalFileName,
+                              String fileType
+                            ) {
         PrintJob job = new PrintJob();
 
         job.setId(UUID.randomUUID());
         job.setOriginalFileName(originalFileName);
         job.setFileType(fileType);
-        job.setFilePath(filePath);
         job.setStatus(PrintJobStatus.RECEIVED);
         job.setPageRange("ALL");
         job.setCopies(1);

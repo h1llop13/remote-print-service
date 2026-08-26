@@ -8,7 +8,8 @@ public class PrintJob {
     private UUID id;
     private String originalFileName;
     private String fileType;
-    private String filePath;
+    private String originalFilePath;
+    private String printableFilePath;
     private PrintJobStatus status;
     private String pageRange;
     private int copies;
@@ -44,12 +45,20 @@ public class PrintJob {
         this.fileType = fileType;
     }
 
-    public String getFilePath() {
-        return filePath;
+    public String getOriginalFilePath() {
+        return originalFilePath;
     }
 
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
+    public void setOriginalFilePath(String originalFilePath) {
+        this.originalFilePath = originalFilePath;
+    }
+
+    public String getPrintableFilePath() {
+        return printableFilePath;
+    }
+
+    public void setPrintableFilePath(String printableFilePath) {
+        this.printableFilePath = printableFilePath;
     }
 
     public PrintJobStatus getStatus() {
