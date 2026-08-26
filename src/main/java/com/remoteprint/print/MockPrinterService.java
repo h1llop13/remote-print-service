@@ -1,6 +1,8 @@
 package com.remoteprint.print;
 
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -8,6 +10,9 @@ import java.util.List;
 
 @Service
 public class MockPrinterService implements PrinterService {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(MockPrinterService.class);
 
     @Override
     public List<String> getAvailablePrinters() {
@@ -41,12 +46,10 @@ public class MockPrinterService implements PrinterService {
             );
         }
 
-        System.out.println(
-                "Mock printing file: " + request.getFilePath()
-        );
-
-        System.out.println(
-                "Copies: " + request.getCopies()
+        log.info(
+                "Mock printing started: file={}, copies={}",
+                request.getFilePath(),
+                request.getCopies()
         );
 
         return new PrintResult(

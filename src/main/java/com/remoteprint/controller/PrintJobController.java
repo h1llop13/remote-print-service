@@ -9,12 +9,17 @@ import com.remoteprint.storage.FileStorageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/v1/print-jobs")
 public class PrintJobController {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(PrintJobController.class);
 
     private final PrintJobService printJobService;
     private final FileStorageService fileStorageService;
@@ -87,9 +92,12 @@ public class PrintJobController {
 
         job.setPrintableFilePath(printableFilePath);
 
-        System.out.println("PDF page count: " + pageCount);
-        System.out.println("Selected pages: " + selectedPages);
-        System.out.println("Printable PDF: " + printableFilePath);
+        log.info(
+                "Print job {} prepared: pages={}, printableFile={}",
+                job.getId(),
+                selectedPages,
+                printableFilePath
+        );
 
         PrintJob processedJob = printJobService.processJob(job);
 
