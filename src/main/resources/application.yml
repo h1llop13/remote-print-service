@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: remote-print-service
+
+printer:
+  name: Canon LBP2900

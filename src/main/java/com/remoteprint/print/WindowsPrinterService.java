@@ -1,5 +1,6 @@
 package com.remoteprint.print;
 
+import com.remoteprint.config.PrinterProperties;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.printing.PDFPageable;
@@ -22,7 +23,13 @@ public class WindowsPrinterService implements PrinterService {
     private static final Logger log =
             LoggerFactory.getLogger(WindowsPrinterService.class);
 
-    private static final String PRINTER_NAME = "Canon LBP2900";
+    private final PrinterProperties printerProperties;
+
+    public WindowsPrinterService(
+            PrinterProperties printerProperties
+    ) {
+        this.printerProperties = printerProperties;
+    }
 
     @Override
     public List<String> getAvailablePrinters() {
@@ -69,7 +76,8 @@ public class WindowsPrinterService implements PrinterService {
         if (printer == null) {
             return new PrintResult(
                     false,
-                    "Canon LBP2900 is unavailable"
+                    "Configured printer is unavailable: "
+                            + printerProperties.getName()
             );
         }
 
@@ -126,7 +134,8 @@ public class WindowsPrinterService implements PrinterService {
 
             return new PrintResult(
                     false,
-                    "Windows printing failed: " + exception.getMessage()
+                    "Windows printing failed: "
+                            + exception.getMessage()
             );
         }
     }
@@ -138,7 +147,9 @@ public class WindowsPrinterService implements PrinterService {
 
         for (PrintService printer : printers) {
 
-            if (printer.getName().equalsIgnoreCase(PRINTER_NAME)) {
+            if (printer.getName().equalsIgnoreCase(
+                    printerProperties.getName()
+            )) {
                 return printer;
             }
         }
