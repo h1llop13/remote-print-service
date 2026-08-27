@@ -1,6 +1,7 @@
 package com.remoteprint.telegram;
 
 import com.remoteprint.config.TelegramProperties;
+import com.remoteprint.document.DocumentConverter;
 import com.remoteprint.document.DocumentValidationService;
 import com.remoteprint.document.PageRangeService;
 import com.remoteprint.document.PdfService;
@@ -21,8 +22,11 @@ import org.telegram.telegrambots.meta.api.objects.Document;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.io.FileInputStream;
 
 @Component
@@ -40,6 +44,7 @@ public class RemotePrintTelegramBot
     private final PdfService pdfService;
     private final PageRangeService pageRangeService;
     private final TelegramSessionService telegramSessionService;
+    private final DocumentConverter documentConverter;
 
     public RemotePrintTelegramBot(
             TelegramProperties telegramProperties,
@@ -48,7 +53,8 @@ public class RemotePrintTelegramBot
             FileStorageService fileStorageService,
             PdfService pdfService,
             PageRangeService pageRangeService,
-            TelegramSessionService telegramSessionService
+            TelegramSessionService telegramSessionService,
+            DocumentConverter documentConverter
     ) {
         this.telegramProperties = telegramProperties;
         this.documentValidationService = documentValidationService;
@@ -57,6 +63,7 @@ public class RemotePrintTelegramBot
         this.pdfService = pdfService;
         this.pageRangeService = pageRangeService;
         this.telegramSessionService = telegramSessionService;
+        this.documentConverter = documentConverter;
 
         this.telegramClient =
                 new OkHttpTelegramClient(
@@ -115,18 +122,27 @@ public class RemotePrintTelegramBot
             Document telegramDocument
     ) {
 
+        Path tempDirectory = null;
+
         try {
-            String fileName =
-                    telegramDocument.getFileName();
+            String fileName = telegramDocument.getFileName();
 
-            if (fileName == null
-                    || !fileName.toLowerCase().endsWith(".pdf")) {
+            if (fileName == null) {
+                sendMessage(chatId, "File name is missing.");
+                return;
+            }
 
+            String lowerFileName = fileName.toLowerCase();
+
+            boolean pdf = lowerFileName.endsWith(".pdf");
+            boolean word = lowerFileName.endsWith(".doc")
+                    || lowerFileName.endsWith(".docx");
+
+            if (!pdf && !word) {
                 sendMessage(
                         chatId,
-                        "Only PDF files are supported."
+                        "Supported formats: PDF, DOC, DOCX."
                 );
-
                 return;
             }
 
@@ -136,9 +152,7 @@ public class RemotePrintTelegramBot
             );
 
             GetFile getFile = GetFile.builder()
-                    .fileId(
-                            telegramDocument.getFileId()
-                    )
+                    .fileId(telegramDocument.getFileId())
                     .build();
 
             org.telegram.telegrambots.meta.api.objects.File telegramFile =
@@ -149,40 +163,83 @@ public class RemotePrintTelegramBot
                             telegramFile.getFilePath()
                     );
 
-            MockMultipartFile multipartFile;
+            MockMultipartFile originalFile;
 
             try (FileInputStream inputStream =
                          new FileInputStream(downloadedFile)) {
 
-                multipartFile =
-                        new MockMultipartFile(
-                                "file",
-                                fileName,
-                                "application/pdf",
-                                inputStream
-                        );
+                originalFile = new MockMultipartFile(
+                        "file",
+                        fileName,
+                        telegramDocument.getMimeType(),
+                        inputStream
+                );
             }
 
-            documentValidationService.validatePdf(
-                    multipartFile
-            );
+            MultipartFile printableSourceFile;
+
+            if (pdf) {
+
+                documentValidationService.validatePdf(
+                        originalFile
+                );
+
+                printableSourceFile = originalFile;
+
+            } else {
+
+                tempDirectory =
+                        Files.createTempDirectory(
+                                "remote-print-conversion-"
+                        );
+
+                Path sourceFile =
+                        tempDirectory.resolve(fileName);
+
+                originalFile.transferTo(sourceFile);
+
+                String convertedPdfPath =
+                        documentConverter.convertToPdf(
+                                sourceFile.toString(),
+                                tempDirectory.toString()
+                        );
+
+                byte[] convertedBytes =
+                        Files.readAllBytes(
+                                Path.of(convertedPdfPath)
+                        );
+
+                printableSourceFile =
+                        new MockMultipartFile(
+                                "file",
+                                "converted.pdf",
+                                "application/pdf",
+                                convertedBytes
+                        );
+
+                documentValidationService.validatePdf(
+                        printableSourceFile
+                );
+            }
 
             int pageCount =
                     pdfService.getPageCount(
-                            multipartFile
+                            printableSourceFile
                     );
 
             telegramSessionService.save(
                     chatId,
                     new TelegramPrintSession(
-                            multipartFile,
+                            originalFile,
+                            printableSourceFile,
                             pageCount
                     )
             );
 
             sendMessage(
                     chatId,
-                    "PDF received.\n\n"
+                    "Document ready.\n\n"
+                            + "File: " + fileName + "\n"
                             + "Pages: " + pageCount + "\n\n"
                             + "Send page range:\n"
                             + "ALL\n"
@@ -204,6 +261,35 @@ public class RemotePrintTelegramBot
                     chatId,
                     "Failed to process the document."
             );
+
+        } finally {
+
+            if (tempDirectory != null) {
+
+                try (var paths = Files.walk(tempDirectory)) {
+
+                    paths.sorted(
+                                    java.util.Comparator.reverseOrder()
+                            )
+                            .forEach(path -> {
+                                try {
+                                    Files.deleteIfExists(path);
+                                } catch (Exception exception) {
+                                    log.warn(
+                                            "Failed to delete temporary file: {}",
+                                            path
+                                    );
+                                }
+                            });
+
+                } catch (Exception exception) {
+
+                    log.warn(
+                            "Failed to clean conversion directory: {}",
+                            tempDirectory
+                    );
+                }
+            }
         }
     }
 
@@ -281,7 +367,7 @@ public class RemotePrintTelegramBot
                     chatId,
                     "Ready to print.\n\n"
                             + "File: "
-                            + session.getFile().getOriginalFilename()
+                            + session.getOriginalFile().getOriginalFilename()
                             + "\n"
                             + "Pages: "
                             + text
@@ -320,15 +406,16 @@ public class RemotePrintTelegramBot
 
             PrintJob job =
                     printJobService.createJob(
-                            session.getFile()
+                            session.getOriginalFile()
                                     .getOriginalFilename(),
-                            "application/pdf"
+                            session.getOriginalFile()
+                                    .getContentType()
                     );
 
             String originalFilePath =
                     fileStorageService.saveOriginalFile(
                             job.getId(),
-                            session.getFile()
+                            session.getOriginalFile()
                     );
 
             job.setOriginalFilePath(
@@ -339,9 +426,15 @@ public class RemotePrintTelegramBot
                     session.getPageRange()
             );
 
+            String sourcePdfPath =
+                    fileStorageService.savePrintableSourceFile(
+                            job.getId(),
+                            session.getPrintableSourceFile()
+                    );
+
             String printableFilePath =
                     pdfService.createPrintablePdf(
-                            originalFilePath,
+                            sourcePdfPath,
                             selectedPages
                     );
 

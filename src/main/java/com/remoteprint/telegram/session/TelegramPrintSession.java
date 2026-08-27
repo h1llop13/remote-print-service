@@ -4,20 +4,27 @@ import org.springframework.web.multipart.MultipartFile;
 
 public class TelegramPrintSession {
 
-    private final MultipartFile file;
+    private final MultipartFile originalFile;
+    private final MultipartFile printableSourceFile;
     private final int pageCount;
     private String pageRange;
 
     public TelegramPrintSession(
-            MultipartFile file,
+            MultipartFile originalFile,
+            MultipartFile printableSourceFile,
             int pageCount
     ) {
-        this.file = file;
+        this.originalFile = originalFile;
+        this.printableSourceFile = printableSourceFile;
         this.pageCount = pageCount;
     }
 
-    public MultipartFile getFile() {
-        return file;
+    public MultipartFile getOriginalFile() {
+        return originalFile;
+    }
+
+    public MultipartFile getPrintableSourceFile() {
+        return printableSourceFile;
     }
 
     public int getPageCount() {

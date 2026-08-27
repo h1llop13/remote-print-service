@@ -25,6 +25,7 @@ printer:
 
 document:
   max-size-bytes: 20971520
+  libreoffice-path: ${LIBREOFFICE_PATH:/Applications/LibreOffice.app/Contents/MacOS/soffice}
 
 telegram:
   bot-token: ${TELEGRAM_BOT_TOKEN:}

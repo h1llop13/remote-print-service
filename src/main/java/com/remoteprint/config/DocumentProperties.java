@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 public class DocumentProperties {
 
     private long maxSizeBytes;
+    private String libreofficePath;
 
     public long getMaxSizeBytes() {
         return maxSizeBytes;
@@ -15,5 +16,13 @@ public class DocumentProperties {
 
     public void setMaxSizeBytes(long maxSizeBytes) {
         this.maxSizeBytes = maxSizeBytes;
+    }
+
+    public String getLibreofficePath() {
+        return libreofficePath;
+    }
+
+    public void setLibreofficePath(String libreofficePath) {
+        this.libreofficePath = libreofficePath;
     }
 }

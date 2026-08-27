@@ -32,4 +32,26 @@ public class FileStorageService {
 
         return targetFile.toString();
     }
+
+    public String savePrintableSourceFile(
+            UUID jobId,
+            MultipartFile file
+    ) throws IOException {
+
+        Path jobDirectory =
+                Path.of(
+                        "data",
+                        "print-jobs",
+                        jobId.toString()
+                );
+
+        Files.createDirectories(jobDirectory);
+
+        Path destination =
+                jobDirectory.resolve("source.pdf");
+
+        file.transferTo(destination);
+
+        return destination.toString();
+    }
 }
