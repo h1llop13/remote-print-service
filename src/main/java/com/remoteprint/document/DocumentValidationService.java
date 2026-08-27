@@ -1,5 +1,6 @@
 package com.remoteprint.document;
 
+import com.remoteprint.config.DocumentProperties;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.springframework.stereotype.Service;
@@ -10,11 +11,25 @@ import java.io.IOException;
 @Service
 public class DocumentValidationService {
 
+    private final DocumentProperties documentProperties;
+
+    public DocumentValidationService(
+            DocumentProperties documentProperties
+    ) {
+        this.documentProperties = documentProperties;
+    }
+
     public void validatePdf(MultipartFile file) {
 
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException(
                     "File must not be empty"
+            );
+        }
+
+        if (file.getSize() > documentProperties.getMaxSizeBytes()) {
+            throw new IllegalArgumentException(
+                    "File exceeds maximum allowed size"
             );
         }
 

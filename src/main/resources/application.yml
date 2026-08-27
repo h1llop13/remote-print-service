@@ -2,5 +2,13 @@ spring:
   application:
     name: remote-print-service
 
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
 printer:
   name: Canon LBP2900
+
+document:
+  max-size-bytes: 20971520
