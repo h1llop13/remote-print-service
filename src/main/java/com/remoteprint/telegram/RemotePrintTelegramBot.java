@@ -239,10 +239,94 @@ public class RemotePrintTelegramBot
         TelegramPrintSession session =
                 sessionOptional.get();
 
+        if ("CANCEL".equalsIgnoreCase(text)) {
+
+            telegramSessionService.remove(chatId);
+
+            sendMessage(
+                    chatId,
+                    "Print job cancelled."
+            );
+
+            return;
+        }
+
+        if ("CONFIRM".equalsIgnoreCase(text)) {
+
+            if (!session.hasPageRange()) {
+                sendMessage(
+                        chatId,
+                        "Select page range first."
+                );
+
+                return;
+            }
+
+            startPrinting(
+                    chatId,
+                    session
+            );
+
+            return;
+        }
+
+        if (session.hasPageRange()) {
+            sendMessage(
+                    chatId,
+                    "Print job is ready.\n\n"
+                            + "Send CONFIRM to start printing\n"
+                            + "or CANCEL to cancel."
+            );
+
+            return;
+        }
+
         try {
+            pageRangeService.parse(
+                    text,
+                    session.getPageCount()
+            );
+
+            session.setPageRange(text);
+
+            sendMessage(
+                    chatId,
+                    "Ready to print.\n\n"
+                            + "File: "
+                            + session.getFile().getOriginalFilename()
+                            + "\n"
+                            + "Pages: "
+                            + text
+                            + "\n"
+                            + "Copies: 1\n\n"
+                            + "Send CONFIRM to start printing\n"
+                            + "or CANCEL to cancel."
+            );
+
+        } catch (IllegalArgumentException exception) {
+
+            sendMessage(
+                    chatId,
+                    "Invalid page range.\n\n"
+                            + exception.getMessage()
+            );
+        }
+    }
+
+    private void startPrinting(
+            long chatId,
+            TelegramPrintSession session
+    ) {
+
+        try {
+            sendMessage(
+                    chatId,
+                    "Processing..."
+            );
+
             var selectedPages =
                     pageRangeService.parse(
-                            text,
+                            session.getPageRange(),
                             session.getPageCount()
                     );
 
@@ -263,7 +347,9 @@ public class RemotePrintTelegramBot
                     originalFilePath
             );
 
-            job.setPageRange(text);
+            job.setPageRange(
+                    session.getPageRange()
+            );
 
             String printableFilePath =
                     pdfService.createPrintablePdf(
@@ -277,9 +363,7 @@ public class RemotePrintTelegramBot
 
             sendMessage(
                     chatId,
-                    "Print job created.\n"
-                            + "Pages: " + text + "\n"
-                            + "Printing..."
+                    "Printing..."
             );
 
             PrintJob processedJob =
@@ -306,14 +390,6 @@ public class RemotePrintTelegramBot
                                 + processedJob.getErrorMessage()
                 );
             }
-
-        } catch (IllegalArgumentException exception) {
-
-            sendMessage(
-                    chatId,
-                    "Invalid page range.\n\n"
-                            + exception.getMessage()
-            );
 
         } catch (Exception exception) {
 

@@ -6,6 +6,7 @@ public class TelegramPrintSession {
 
     private final MultipartFile file;
     private final int pageCount;
+    private String pageRange;
 
     public TelegramPrintSession(
             MultipartFile file,
@@ -21,5 +22,18 @@ public class TelegramPrintSession {
 
     public int getPageCount() {
         return pageCount;
+    }
+
+    public String getPageRange() {
+        return pageRange;
+    }
+
+    public void setPageRange(String pageRange) {
+        this.pageRange = pageRange;
+    }
+
+    public boolean hasPageRange() {
+        return pageRange != null
+                && !pageRange.isBlank();
     }
 }
