@@ -139,4 +139,23 @@ public class PrintJobService {
     public List<PrintJob> getJobs() {
         return printJobRepository.findAll();
     }
+
+    public PrintJob retryJob(UUID id) {
+
+        PrintJob job = getJob(id);
+
+        job.setStatus(PrintJobStatus.RECEIVED);
+        job.setStartedAt(null);
+        job.setCompletedAt(null);
+        job.setErrorMessage(null);
+
+        printJobRepository.save(job);
+
+        log.info(
+                "Retrying print job {}",
+                job.getId()
+        );
+
+        return processJob(job);
+    }
 }

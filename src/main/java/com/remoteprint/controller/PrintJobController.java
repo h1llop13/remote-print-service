@@ -137,4 +137,16 @@ public class PrintJobController {
 
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/{id}/retry")
+    public ResponseEntity<PrintJobResponse> retryPrintJob(
+            @PathVariable UUID id
+    ) {
+
+        PrintJob job = printJobService.retryJob(id);
+
+        return ResponseEntity.ok(
+                printJobMapper.toResponse(job)
+        );
+    }
 }
