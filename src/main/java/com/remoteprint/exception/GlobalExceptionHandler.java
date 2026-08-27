@@ -23,4 +23,18 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.BAD_REQUEST)
                 .body(response);
     }
+
+    @ExceptionHandler(PrintJobNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handlePrintJobNotFoundException(
+            PrintJobNotFoundException exception
+    ) {
+
+        Map<String, String> response = Map.of(
+                "error", exception.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(response);
+    }
 }

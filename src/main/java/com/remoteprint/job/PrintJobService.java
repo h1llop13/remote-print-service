@@ -6,6 +6,7 @@ import com.remoteprint.print.PrintResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import com.remoteprint.exception.PrintJobNotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -132,9 +133,7 @@ public class PrintJobService {
 
     public PrintJob getJob(UUID id) {
         return printJobRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Print job not found: " + id
-                ));
+                .orElseThrow(() -> new PrintJobNotFoundException(id));
     }
 
     public List<PrintJob> getJobs() {
