@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.remoteprint.dto.PrintJobResponse;
 
 import java.io.IOException;
 
@@ -42,7 +43,7 @@ public class PrintJobController {
     }
 
     @PostMapping
-    public ResponseEntity<PrintJob> createPrintJob(
+    public ResponseEntity<PrintJobResponse> createPrintJob(
             @RequestParam("file") MultipartFile file,
             @RequestParam(
                     value = "pageRange",
@@ -101,6 +102,21 @@ public class PrintJobController {
 
         PrintJob processedJob = printJobService.processJob(job);
 
-        return ResponseEntity.ok(processedJob);
+        PrintJobResponse response = new PrintJobResponse(
+                processedJob.getId(),
+                processedJob.getOriginalFileName(),
+                processedJob.getFileType(),
+                processedJob.getOriginalFilePath(),
+                processedJob.getPrintableFilePath(),
+                processedJob.getStatus(),
+                processedJob.getPageRange(),
+                processedJob.getCopies(),
+                processedJob.getCreatedAt(),
+                processedJob.getStartedAt(),
+                processedJob.getCompletedAt(),
+                processedJob.getErrorMessage()
+        );
+
+        return ResponseEntity.ok(response);
     }
 }
