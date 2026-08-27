@@ -15,6 +15,8 @@ import com.remoteprint.dto.PrintJobResponse;
 import com.remoteprint.mapper.PrintJobMapper;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/print-jobs")
@@ -110,5 +112,29 @@ public class PrintJobController {
                 printJobMapper.toResponse(processedJob)
         );
 
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<PrintJobResponse> getPrintJob(
+            @PathVariable UUID id
+    ) {
+
+        PrintJob job = printJobService.getJob(id);
+
+        return ResponseEntity.ok(
+                printJobMapper.toResponse(job)
+        );
+    }
+
+    @GetMapping
+    public ResponseEntity<List<PrintJobResponse>> getPrintJobs() {
+
+        List<PrintJobResponse> response =
+                printJobService.getJobs()
+                        .stream()
+                        .map(printJobMapper::toResponse)
+                        .toList();
+
+        return ResponseEntity.ok(response);
     }
 }

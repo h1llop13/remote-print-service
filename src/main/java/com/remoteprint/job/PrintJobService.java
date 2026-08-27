@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -17,9 +18,14 @@ public class PrintJobService {
             LoggerFactory.getLogger(PrintJobService.class);
 
     private final PrinterService printerService;
+    private final InMemoryPrintJobRepository printJobRepository;
 
-    public PrintJobService(PrinterService printerService) {
+    public PrintJobService(
+            PrinterService printerService,
+            InMemoryPrintJobRepository printJobRepository
+    ) {
         this.printerService = printerService;
+        this.printJobRepository = printJobRepository;
     }
 
     public PrintJob createJob(
@@ -36,6 +42,8 @@ public class PrintJobService {
         job.setCopies(1);
         job.setCreatedAt(LocalDateTime.now());
 
+        printJobRepository.save(job);
+
         return job;
     }
 
@@ -44,6 +52,8 @@ public class PrintJobService {
         try {
             job.setStatus(PrintJobStatus.PROCESSING);
             job.setStartedAt(LocalDateTime.now());
+
+            printJobRepository.save(job);
 
             log.info(
                     "Processing print job {}",
@@ -54,6 +64,8 @@ public class PrintJobService {
                 job.setStatus(PrintJobStatus.FAILED);
                 job.setErrorMessage("Printer is unavailable");
 
+                printJobRepository.save(job);
+
                 log.warn(
                         "Print job {} failed: printer is unavailable",
                         job.getId()
@@ -63,6 +75,8 @@ public class PrintJobService {
             }
 
             job.setStatus(PrintJobStatus.PRINTING);
+
+            printJobRepository.save(job);
 
             PrintRequest printRequest = new PrintRequest(
                     job.getPrintableFilePath(),
@@ -76,6 +90,8 @@ public class PrintJobService {
                 job.setStatus(PrintJobStatus.FAILED);
                 job.setErrorMessage(printResult.getMessage());
 
+                printJobRepository.save(job);
+
                 log.warn(
                         "Print job {} failed: {}",
                         job.getId(),
@@ -87,6 +103,8 @@ public class PrintJobService {
 
             job.setStatus(PrintJobStatus.COMPLETED);
             job.setCompletedAt(LocalDateTime.now());
+
+            printJobRepository.save(job);
 
             log.info(
                     "Print job {} completed",
@@ -100,6 +118,8 @@ public class PrintJobService {
             job.setStatus(PrintJobStatus.FAILED);
             job.setErrorMessage(exception.getMessage());
 
+            printJobRepository.save(job);
+
             log.error(
                     "Print job {} failed",
                     job.getId(),
@@ -108,5 +128,16 @@ public class PrintJobService {
 
             return job;
         }
+    }
+
+    public PrintJob getJob(UUID id) {
+        return printJobRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Print job not found: " + id
+                ));
+    }
+
+    public List<PrintJob> getJobs() {
+        return printJobRepository.findAll();
     }
 }
