@@ -12,3 +12,7 @@ printer:
 
 document:
   max-size-bytes: 20971520
+
+telegram:
+  bot-token: ${TELEGRAM_BOT_TOKEN:}
+  allowed-chat-ids: ${TELEGRAM_ALLOWED_CHAT_IDS:}
