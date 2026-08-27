@@ -7,6 +7,8 @@ import com.remoteprint.document.PdfService;
 import com.remoteprint.job.PrintJob;
 import com.remoteprint.job.PrintJobService;
 import com.remoteprint.storage.FileStorageService;
+import com.remoteprint.telegram.session.TelegramPrintSession;
+import com.remoteprint.telegram.session.TelegramSessionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mock.web.MockMultipartFile;
@@ -37,6 +39,7 @@ public class RemotePrintTelegramBot
     private final FileStorageService fileStorageService;
     private final PdfService pdfService;
     private final PageRangeService pageRangeService;
+    private final TelegramSessionService telegramSessionService;
 
     public RemotePrintTelegramBot(
             TelegramProperties telegramProperties,
@@ -44,7 +47,8 @@ public class RemotePrintTelegramBot
             PrintJobService printJobService,
             FileStorageService fileStorageService,
             PdfService pdfService,
-            PageRangeService pageRangeService
+            PageRangeService pageRangeService,
+            TelegramSessionService telegramSessionService
     ) {
         this.telegramProperties = telegramProperties;
         this.documentValidationService = documentValidationService;
@@ -52,6 +56,7 @@ public class RemotePrintTelegramBot
         this.fileStorageService = fileStorageService;
         this.pdfService = pdfService;
         this.pageRangeService = pageRangeService;
+        this.telegramSessionService = telegramSessionService;
 
         this.telegramClient =
                 new OkHttpTelegramClient(
@@ -73,25 +78,34 @@ public class RemotePrintTelegramBot
             return;
         }
 
+        if (update.getMessage().hasDocument()) {
+            handleDocument(
+                    chatId,
+                    update.getMessage().getDocument()
+            );
+
+            return;
+        }
+
         if (update.getMessage().hasText()) {
 
-            String text = update.getMessage().getText();
+            String text = update.getMessage()
+                    .getText()
+                    .trim();
 
-            if ("/start".equals(text)) {
+            if ("/start".equalsIgnoreCase(text)) {
                 sendMessage(
                         chatId,
                         "Remote Print Service is ready.\n\n"
                                 + "Send me a PDF document to print."
                 );
+
+                return;
             }
 
-            return;
-        }
-
-        if (update.getMessage().hasDocument()) {
-            handleDocument(
+            handleTextMessage(
                     chatId,
-                    update.getMessage().getDocument()
+                    text
             );
         }
     }
@@ -102,7 +116,8 @@ public class RemotePrintTelegramBot
     ) {
 
         try {
-            String fileName = telegramDocument.getFileName();
+            String fileName =
+                    telegramDocument.getFileName();
 
             if (fileName == null
                     || !fileName.toLowerCase().endsWith(".pdf")) {
@@ -121,7 +136,9 @@ public class RemotePrintTelegramBot
             );
 
             GetFile getFile = GetFile.builder()
-                    .fileId(telegramDocument.getFileId())
+                    .fileId(
+                            telegramDocument.getFileId()
+                    )
                     .build();
 
             org.telegram.telegrambots.meta.api.objects.File telegramFile =
@@ -137,66 +154,55 @@ public class RemotePrintTelegramBot
             try (FileInputStream inputStream =
                          new FileInputStream(downloadedFile)) {
 
-                multipartFile = new MockMultipartFile(
-                        "file",
-                        fileName,
-                        "application/pdf",
-                        inputStream
-                );
+                multipartFile =
+                        new MockMultipartFile(
+                                "file",
+                                fileName,
+                                "application/pdf",
+                                inputStream
+                        );
             }
 
-            documentValidationService.validatePdf(multipartFile);
-
-            PrintJob job = printJobService.createJob(
-                    fileName,
-                    "application/pdf"
+            documentValidationService.validatePdf(
+                    multipartFile
             );
 
-            String originalFilePath =
+            PrintJob tempJob =
+                    printJobService.createJob(
+                            fileName,
+                            "application/pdf"
+                    );
+
+            String tempOriginalFilePath =
                     fileStorageService.saveOriginalFile(
-                            job.getId(),
+                            tempJob.getId(),
                             multipartFile
                     );
 
-            job.setOriginalFilePath(originalFilePath);
-
             int pageCount =
-                    pdfService.getPageCount(originalFilePath);
+                    pdfService.getPageCount(
+                            tempOriginalFilePath
+                    );
 
-            var selectedPages =
-                    pageRangeService.parse(
-                            "ALL",
+            telegramSessionService.save(
+                    chatId,
+                    new TelegramPrintSession(
+                            multipartFile,
                             pageCount
-                    );
+                    )
+            );
 
-            job.setPageRange("ALL");
-
-            String printableFilePath =
-                    pdfService.createPrintablePdf(
-                            originalFilePath,
-                            selectedPages
-                    );
-
-            job.setPrintableFilePath(printableFilePath);
-
-            PrintJob processedJob =
-                    printJobService.processJob(job);
-
-            if (processedJob.getStatus().name().equals("COMPLETED")) {
-
-                sendMessage(
-                        chatId,
-                        "Print completed successfully."
-                );
-
-            } else {
-
-                sendMessage(
-                        chatId,
-                        "Print failed.\n\n"
-                                + processedJob.getErrorMessage()
-                );
-            }
+            sendMessage(
+                    chatId,
+                    "PDF received.\n\n"
+                            + "Pages: " + pageCount + "\n\n"
+                            + "Send page range:\n"
+                            + "ALL\n"
+                            + "1\n"
+                            + "1-3\n"
+                            + "1,3,5\n"
+                            + "1-3,5"
+            );
 
         } catch (Exception exception) {
 
@@ -213,15 +219,127 @@ public class RemotePrintTelegramBot
         }
     }
 
+    private void handleTextMessage(
+            long chatId,
+            String text
+    ) {
+
+        var sessionOptional =
+                telegramSessionService.get(chatId);
+
+        if (sessionOptional.isEmpty()) {
+            sendMessage(
+                    chatId,
+                    "Send me a PDF document first."
+            );
+
+            return;
+        }
+
+        TelegramPrintSession session =
+                sessionOptional.get();
+
+        try {
+            var selectedPages =
+                    pageRangeService.parse(
+                            text,
+                            session.getPageCount()
+                    );
+
+            PrintJob job =
+                    printJobService.createJob(
+                            session.getFile()
+                                    .getOriginalFilename(),
+                            "application/pdf"
+                    );
+
+            String originalFilePath =
+                    fileStorageService.saveOriginalFile(
+                            job.getId(),
+                            session.getFile()
+                    );
+
+            job.setOriginalFilePath(
+                    originalFilePath
+            );
+
+            job.setPageRange(text);
+
+            String printableFilePath =
+                    pdfService.createPrintablePdf(
+                            originalFilePath,
+                            selectedPages
+                    );
+
+            job.setPrintableFilePath(
+                    printableFilePath
+            );
+
+            sendMessage(
+                    chatId,
+                    "Print job created.\n"
+                            + "Pages: " + text + "\n"
+                            + "Printing..."
+            );
+
+            PrintJob processedJob =
+                    printJobService.processJob(job);
+
+            if (processedJob.getStatus()
+                    .name()
+                    .equals("COMPLETED")) {
+
+                sendMessage(
+                        chatId,
+                        "Print completed successfully."
+                );
+
+                telegramSessionService.remove(
+                        chatId
+                );
+
+            } else {
+
+                sendMessage(
+                        chatId,
+                        "Print failed.\n\n"
+                                + processedJob.getErrorMessage()
+                );
+            }
+
+        } catch (IllegalArgumentException exception) {
+
+            sendMessage(
+                    chatId,
+                    "Invalid page range.\n\n"
+                            + exception.getMessage()
+            );
+
+        } catch (Exception exception) {
+
+            log.error(
+                    "Telegram print failed: chatId={}",
+                    chatId,
+                    exception
+            );
+
+            sendMessage(
+                    chatId,
+                    "Failed to start printing."
+            );
+        }
+    }
+
     private void sendMessage(
             long chatId,
             String text
     ) {
 
-        SendMessage message = SendMessage.builder()
-                .chatId(chatId)
-                .text(text)
-                .build();
+        SendMessage message =
+                SendMessage.builder()
+                        .chatId(chatId)
+                        .text(text)
+                        .build();
 
         try {
             telegramClient.execute(message);
