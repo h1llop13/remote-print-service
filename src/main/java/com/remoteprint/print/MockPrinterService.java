@@ -3,12 +3,14 @@ package com.remoteprint.print;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
 @Service
+@Profile("!windows")
 public class MockPrinterService implements PrinterService {
 
     private static final Logger log =

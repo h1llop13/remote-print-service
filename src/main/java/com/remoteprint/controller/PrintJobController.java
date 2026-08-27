@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.remoteprint.dto.PrintJobResponse;
+import com.remoteprint.mapper.PrintJobMapper;
 
 import java.io.IOException;
 
@@ -27,19 +28,22 @@ public class PrintJobController {
     private final PdfService pdfService;
     private final PageRangeService pageRangeService;
     private final DocumentValidationService documentValidationService;
+    private final PrintJobMapper printJobMapper;
 
     public PrintJobController(
             PrintJobService printJobService,
             FileStorageService fileStorageService,
             PdfService pdfService,
             PageRangeService pageRangeService,
-            DocumentValidationService documentValidationService
+            DocumentValidationService documentValidationService,
+            PrintJobMapper printJobMapper
     ) {
         this.printJobService = printJobService;
         this.fileStorageService = fileStorageService;
         this.pdfService = pdfService;
         this.pageRangeService = pageRangeService;
         this.documentValidationService = documentValidationService;
+        this.printJobMapper = printJobMapper;
     }
 
     @PostMapping
@@ -102,21 +106,9 @@ public class PrintJobController {
 
         PrintJob processedJob = printJobService.processJob(job);
 
-        PrintJobResponse response = new PrintJobResponse(
-                processedJob.getId(),
-                processedJob.getOriginalFileName(),
-                processedJob.getFileType(),
-                processedJob.getOriginalFilePath(),
-                processedJob.getPrintableFilePath(),
-                processedJob.getStatus(),
-                processedJob.getPageRange(),
-                processedJob.getCopies(),
-                processedJob.getCreatedAt(),
-                processedJob.getStartedAt(),
-                processedJob.getCompletedAt(),
-                processedJob.getErrorMessage()
+        return ResponseEntity.ok(
+                printJobMapper.toResponse(processedJob)
         );
 
-        return ResponseEntity.ok(response);
     }
 }
