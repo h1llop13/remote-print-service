@@ -19,11 +19,11 @@ public class PrintJobService {
             LoggerFactory.getLogger(PrintJobService.class);
 
     private final PrinterService printerService;
-    private final InMemoryPrintJobRepository printJobRepository;
+    private final PrintJobRepository printJobRepository;
 
     public PrintJobService(
             PrinterService printerService,
-            InMemoryPrintJobRepository printJobRepository
+            PrintJobRepository printJobRepository
     ) {
         this.printerService = printerService;
         this.printJobRepository = printJobRepository;

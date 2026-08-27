@@ -2,6 +2,19 @@ spring:
   application:
     name: remote-print-service
 
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/remote_print}
+    username: ${DB_USERNAME:andrey}
+    password: ${DB_PASSWORD:}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
+
   servlet:
     multipart:
       max-file-size: 20MB

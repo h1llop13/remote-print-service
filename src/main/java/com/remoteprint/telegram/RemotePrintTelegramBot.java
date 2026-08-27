@@ -167,21 +167,9 @@ public class RemotePrintTelegramBot
                     multipartFile
             );
 
-            PrintJob tempJob =
-                    printJobService.createJob(
-                            fileName,
-                            "application/pdf"
-                    );
-
-            String tempOriginalFilePath =
-                    fileStorageService.saveOriginalFile(
-                            tempJob.getId(),
-                            multipartFile
-                    );
-
             int pageCount =
                     pdfService.getPageCount(
-                            tempOriginalFilePath
+                            multipartFile
                     );
 
             telegramSessionService.save(

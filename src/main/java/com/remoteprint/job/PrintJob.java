@@ -1,25 +1,50 @@
 package com.remoteprint.job;
 
+import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Entity
+@Table(name = "print_jobs")
 public class PrintJob {
 
+    @Id
     private UUID id;
-    private String originalFileName;
-    private String fileType;
-    private String originalFilePath;
-    private String printableFilePath;
-    private PrintJobStatus status;
-    private String pageRange;
-    private int copies;
-    private LocalDateTime createdAt;
-    private LocalDateTime startedAt;
-    private LocalDateTime completedAt;
-    private String errorMessage;
 
-    public PrintJob() {
-    }
+    @Column(name = "original_file_name", nullable = false)
+    private String originalFileName;
+
+    @Column(name = "file_type")
+    private String fileType;
+
+    @Column(name = "original_file_path")
+    private String originalFilePath;
+
+    @Column(name = "printable_file_path")
+    private String printableFilePath;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private PrintJobStatus status;
+
+    @Column(name = "page_range")
+    private String pageRange;
+
+    @Column(name = "copies", nullable = false)
+    private int copies;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "started_at")
+    private LocalDateTime startedAt;
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    @Column(name = "error_message")
+    private String errorMessage;
 
     public UUID getId() {
         return id;
