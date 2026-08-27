@@ -1,12 +1,12 @@
 package com.remoteprint.job;
 
+import com.remoteprint.exception.PrintJobNotFoundException;
 import com.remoteprint.print.PrinterService;
 import com.remoteprint.print.PrintRequest;
 import com.remoteprint.print.PrintResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import com.remoteprint.exception.PrintJobNotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -53,6 +53,7 @@ public class PrintJobService {
         try {
             job.setStatus(PrintJobStatus.PROCESSING);
             job.setStartedAt(LocalDateTime.now());
+            job.setErrorMessage(null);
 
             printJobRepository.save(job);
 
@@ -62,6 +63,7 @@ public class PrintJobService {
             );
 
             if (!printerService.isPrinterAvailable()) {
+
                 job.setStatus(PrintJobStatus.FAILED);
                 job.setErrorMessage("Printer is unavailable");
 
@@ -79,17 +81,21 @@ public class PrintJobService {
 
             printJobRepository.save(job);
 
-            PrintRequest printRequest = new PrintRequest(
-                    job.getPrintableFilePath(),
-                    job.getCopies()
-            );
+            PrintRequest printRequest =
+                    new PrintRequest(
+                            job.getPrintableFilePath(),
+                            job.getCopies()
+                    );
 
             PrintResult printResult =
                     printerService.print(printRequest);
 
             if (!printResult.isSuccess()) {
+
                 job.setStatus(PrintJobStatus.FAILED);
-                job.setErrorMessage(printResult.getMessage());
+                job.setErrorMessage(
+                        printResult.getMessage()
+                );
 
                 printJobRepository.save(job);
 
@@ -104,6 +110,7 @@ public class PrintJobService {
 
             job.setStatus(PrintJobStatus.COMPLETED);
             job.setCompletedAt(LocalDateTime.now());
+            job.setErrorMessage(null);
 
             printJobRepository.save(job);
 
@@ -117,7 +124,9 @@ public class PrintJobService {
         } catch (Exception exception) {
 
             job.setStatus(PrintJobStatus.FAILED);
-            job.setErrorMessage(exception.getMessage());
+            job.setErrorMessage(
+                    exception.getMessage()
+            );
 
             printJobRepository.save(job);
 
@@ -132,8 +141,12 @@ public class PrintJobService {
     }
 
     public PrintJob getJob(UUID id) {
-        return printJobRepository.findById(id)
-                .orElseThrow(() -> new PrintJobNotFoundException(id));
+
+        return printJobRepository
+                .findById(id)
+                .orElseThrow(
+                        () -> new PrintJobNotFoundException(id)
+                );
     }
 
     public List<PrintJob> getJobs() {
@@ -144,6 +157,12 @@ public class PrintJobService {
 
         PrintJob job = getJob(id);
 
+        if (job.getStatus() != PrintJobStatus.FAILED) {
+            throw new IllegalStateException(
+                    "Only failed print jobs can be retried"
+            );
+        }
+
         job.setStatus(PrintJobStatus.RECEIVED);
         job.setStartedAt(null);
         job.setCompletedAt(null);
@@ -152,10 +171,26 @@ public class PrintJobService {
         printJobRepository.save(job);
 
         log.info(
-                "Retrying print job {}",
+                "Print job {} prepared for retry",
                 job.getId()
         );
 
-        return processJob(job);
+        return job;
+    }
+
+    public PrintJob save(PrintJob job) {
+        return printJobRepository.save(job);
+    }
+
+    public List<PrintJob> findRecoverableJobs() {
+
+        return printJobRepository
+                .findByStatusInOrderByCreatedAtAsc(
+                        List.of(
+                                PrintJobStatus.QUEUED,
+                                PrintJobStatus.PROCESSING,
+                                PrintJobStatus.PRINTING
+                        )
+                );
     }
 }

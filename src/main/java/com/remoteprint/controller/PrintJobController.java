@@ -5,6 +5,7 @@ import com.remoteprint.document.PageRangeService;
 import com.remoteprint.document.PdfService;
 import com.remoteprint.job.PrintJob;
 import com.remoteprint.job.PrintJobService;
+import com.remoteprint.job.PrintQueueService;
 import com.remoteprint.storage.FileStorageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,6 +32,7 @@ public class PrintJobController {
     private final PageRangeService pageRangeService;
     private final DocumentValidationService documentValidationService;
     private final PrintJobMapper printJobMapper;
+    private final PrintQueueService printQueueService;
 
     public PrintJobController(
             PrintJobService printJobService,
@@ -38,7 +40,8 @@ public class PrintJobController {
             PdfService pdfService,
             PageRangeService pageRangeService,
             DocumentValidationService documentValidationService,
-            PrintJobMapper printJobMapper
+            PrintJobMapper printJobMapper,
+            PrintQueueService printQueueService
     ) {
         this.printJobService = printJobService;
         this.fileStorageService = fileStorageService;
@@ -46,6 +49,7 @@ public class PrintJobController {
         this.pageRangeService = pageRangeService;
         this.documentValidationService = documentValidationService;
         this.printJobMapper = printJobMapper;
+        this.printQueueService = printQueueService;
     }
 
     @PostMapping
@@ -139,14 +143,14 @@ public class PrintJobController {
     }
 
     @PostMapping("/{id}/retry")
-    public ResponseEntity<PrintJobResponse> retryPrintJob(
+    public PrintJob retryJob(
             @PathVariable UUID id
     ) {
+        PrintJob job =
+                printJobService.retryJob(id);
 
-        PrintJob job = printJobService.retryJob(id);
+        printQueueService.enqueue(job);
 
-        return ResponseEntity.ok(
-                printJobMapper.toResponse(job)
-        );
+        return job;
     }
 }

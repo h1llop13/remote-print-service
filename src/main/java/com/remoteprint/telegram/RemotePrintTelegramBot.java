@@ -23,6 +23,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 import org.springframework.web.multipart.MultipartFile;
+import com.remoteprint.job.PrintQueueService;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -45,6 +46,7 @@ public class RemotePrintTelegramBot
     private final PageRangeService pageRangeService;
     private final TelegramSessionService telegramSessionService;
     private final DocumentConverter documentConverter;
+    private final PrintQueueService printQueueService;
 
     public RemotePrintTelegramBot(
             TelegramProperties telegramProperties,
@@ -54,7 +56,8 @@ public class RemotePrintTelegramBot
             PdfService pdfService,
             PageRangeService pageRangeService,
             TelegramSessionService telegramSessionService,
-            DocumentConverter documentConverter
+            DocumentConverter documentConverter,
+            PrintQueueService printQueueService
     ) {
         this.telegramProperties = telegramProperties;
         this.documentValidationService = documentValidationService;
@@ -64,6 +67,7 @@ public class RemotePrintTelegramBot
         this.pageRangeService = pageRangeService;
         this.telegramSessionService = telegramSessionService;
         this.documentConverter = documentConverter;
+        this.printQueueService = printQueueService;
 
         this.telegramClient =
                 new OkHttpTelegramClient(
@@ -442,35 +446,15 @@ public class RemotePrintTelegramBot
                     printableFilePath
             );
 
+            printQueueService.enqueue(job);
+
+            telegramSessionService.remove(chatId);
+
             sendMessage(
                     chatId,
-                    "Printing..."
+                    "Print job added to queue.\n\n"
+                            + "Job ID: " + job.getId()
             );
-
-            PrintJob processedJob =
-                    printJobService.processJob(job);
-
-            if (processedJob.getStatus()
-                    .name()
-                    .equals("COMPLETED")) {
-
-                sendMessage(
-                        chatId,
-                        "Print completed successfully."
-                );
-
-                telegramSessionService.remove(
-                        chatId
-                );
-
-            } else {
-
-                sendMessage(
-                        chatId,
-                        "Print failed.\n\n"
-                                + processedJob.getErrorMessage()
-                );
-            }
 
         } catch (Exception exception) {
 
