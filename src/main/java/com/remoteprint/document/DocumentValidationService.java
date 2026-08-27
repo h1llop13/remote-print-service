@@ -32,14 +32,6 @@ public class DocumentValidationService {
             );
         }
 
-        String contentType = file.getContentType();
-
-        if (!"application/pdf".equalsIgnoreCase(contentType)) {
-            throw new IllegalArgumentException(
-                    "Invalid PDF content type"
-            );
-        }
-
         validatePdfStructure(file);
     }
 
