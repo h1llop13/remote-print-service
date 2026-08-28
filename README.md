@@ -10,7 +10,7 @@
 Проект является экспериментальным и не претендует на полноценную замену
 специализированных решений для сетевой печати.
 
-![Демонстрация Remote Print Service](docs/images/demo.png)
+<img src="docs/images/demo.png" alt="Демонстрация Remote Print Service" width="500">
 
 ## Как это работает
 
