@@ -14,15 +14,7 @@
 
 ## Как это работает
 
-iPhone / Mac
-↓
-Telegram Bot
-↓
-Remote Print Service
-↓
-Windows Print System
-↓
-USB-принтер
+iPhone / Mac -> Telegram Bot -> Remote Print Service -> Windows Print System -> USB-принтер
 
 Remote Print Service запускается на Windows-компьютере, к которому физически подключён
 принтер.
